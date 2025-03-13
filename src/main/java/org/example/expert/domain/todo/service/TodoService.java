@@ -28,18 +28,14 @@ public class TodoService {
     @Transactional
     public TodoSaveResponse saveTodo(AuthUser authUser, TodoSaveRequest todoSaveRequest) {
         User user = User.fromAuthUser(authUser);
-        System.out.println(1);
         String weather = weatherClient.getTodayWeather();
-        System.out.println(2);
         Todo newTodo = new Todo(
                 todoSaveRequest.getTitle(),
                 todoSaveRequest.getContents(),
                 weather,
                 user
         );
-        System.out.println(3);
         Todo savedTodo = todoRepository.save(newTodo);
-        System.out.println(4);
         return new TodoSaveResponse(
                 savedTodo.getId(),
                 savedTodo.getTitle(),
