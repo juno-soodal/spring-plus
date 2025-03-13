@@ -1,12 +1,15 @@
 package org.example.expert.domain.todo.repository;
 
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
+import org.example.expert.domain.todo.entity.QTodo;
 import org.example.expert.domain.todo.entity.Todo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
@@ -17,12 +20,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
+import static org.example.expert.domain.todo.entity.QTodo.todo;
+import static org.example.expert.domain.user.entity.QUser.user;
 
 @Repository
 @RequiredArgsConstructor
 public class TodoQueryRepositoryImpl implements TodoQueryRepository{
 
     private final EntityManager em;
+    private final JPAQueryFactory queryFactory;
 
     @Override
     public Page<Todo> findAllByOrderByModifiedAtDesc(Pageable pageable, String weather, LocalDate startDate, LocalDate endDate) {
@@ -66,5 +74,15 @@ public class TodoQueryRepositoryImpl implements TodoQueryRepository{
         long total = countQuery.getSingleResult();
 
         return new PageImpl<>(todos,pageable,total);
+    }
+
+    @Override
+    public Optional<Todo> findByIdWithUser(Long todoId) {
+        Todo result = queryFactory.selectFrom(todo)
+                .leftJoin(todo.user, user)
+                .fetchJoin()
+                .where(todo.id.eq(todoId))
+                .fetchFirst();
+        return Optional.ofNullable(result);
     }
 }
