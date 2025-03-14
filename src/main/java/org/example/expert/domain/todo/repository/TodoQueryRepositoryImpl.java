@@ -1,15 +1,19 @@
 package org.example.expert.domain.todo.repository;
 
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
-import org.example.expert.domain.todo.entity.QTodo;
+import org.example.expert.domain.todo.dto.response.TodoSearchResponse;
 import org.example.expert.domain.todo.entity.Todo;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
@@ -22,12 +26,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.example.expert.domain.comment.entity.QComment.comment;
+import static org.example.expert.domain.manager.entity.QManager.manager;
 import static org.example.expert.domain.todo.entity.QTodo.todo;
 import static org.example.expert.domain.user.entity.QUser.user;
 
 @Repository
 @RequiredArgsConstructor
-public class TodoQueryRepositoryImpl implements TodoQueryRepository{
+public class TodoQueryRepositoryImpl implements TodoQueryRepository {
 
     private final EntityManager em;
     private final JPAQueryFactory queryFactory;
@@ -61,7 +67,7 @@ public class TodoQueryRepositoryImpl implements TodoQueryRepository{
 
         baseTodosQuery.append(" order by t.modifiedAt desc");
         TypedQuery<Todo> todosQuery = em.createQuery(baseTodosQuery.toString(), Todo.class);
-        params.forEach( (k, v) -> todosQuery.setParameter(k, v));
+        params.forEach((k, v) -> todosQuery.setParameter(k, v));
 
         List<Todo> todos = todosQuery
                 .setFirstResult((int) pageable.getOffset())
@@ -69,11 +75,11 @@ public class TodoQueryRepositoryImpl implements TodoQueryRepository{
                 .getResultList();
 
         TypedQuery<Long> countQuery = em.createQuery(baseCountQuery.toString(), Long.class);
-        params.forEach( (k, v) -> countQuery.setParameter(k, v));
+        params.forEach((k, v) -> countQuery.setParameter(k, v));
 
         long total = countQuery.getSingleResult();
 
-        return new PageImpl<>(todos,pageable,total);
+        return new PageImpl<>(todos, pageable, total);
     }
 
     @Override
@@ -85,4 +91,58 @@ public class TodoQueryRepositoryImpl implements TodoQueryRepository{
                 .fetchFirst();
         return Optional.ofNullable(result);
     }
+
+    @Override
+    public Page<TodoSearchResponse> searchTodos(Pageable pageable, String keyword, String nickname, LocalDate startDate, LocalDate endDate) {
+
+        List<TodoSearchResponse> fetch = queryFactory.select(Projections.constructor(
+                                TodoSearchResponse.class,
+                                todo.title,
+                                manager.countDistinct(),
+                                comment.countDistinct()
+                        )
+                ).from(todo)
+                .leftJoin(todo.managers,manager).on(manager.todo.id.eq(todo.id))
+                .leftJoin(todo.comments,comment).on(comment.todo.id.eq(todo.id))
+                .where(
+                        todoTitleContains(keyword),
+                        todoCreatedAtGoe(startDate),
+                        todoCreatedAtLoe(endDate),
+                        nicknameContains(nickname)
+                )
+                .groupBy(todo.id, todo.title)
+                .orderBy(todo.createdAt.desc())
+                .offset(pageable.getOffset()).limit(pageable.getPageSize()).fetch();
+
+        JPAQuery<Long> countQuery = queryFactory.select(todo.count()).from(todo).where(
+                todoTitleContains(keyword),
+                todoCreatedAtGoe(startDate),
+                todoCreatedAtLoe(endDate),
+                nicknameContains(nickname)
+        );
+        return PageableExecutionUtils.getPage(fetch, pageable, () -> countQuery.fetchOne());
+    }
+
+    private BooleanExpression nicknameContains(String nickname) {
+        return StringUtils.hasText(nickname) ? JPAExpressions.selectOne().from(manager)
+                .join(manager.user, user)
+                .where(
+                        manager.user.id.eq(user.id),
+                        manager.todo.id.eq(todo.id),
+                        user.nickname.containsIgnoreCase(nickname)
+                ).exists() : null;
+    }
+
+    private BooleanExpression todoCreatedAtLoe(LocalDate endDate) {
+        return endDate != null ? todo.createdAt.loe(LocalDateTime.of(endDate, LocalTime.MAX)) : null;
+    }
+
+    private BooleanExpression todoCreatedAtGoe(LocalDate startDate) {
+        return startDate != null ? todo.createdAt.goe(LocalDateTime.of(startDate, LocalTime.MIN)) : null;
+    }
+
+    private BooleanExpression todoTitleContains(String keyword) {
+        return StringUtils.hasText(keyword) ? todo.title.contains(keyword) : null;
+    }
+
 }
