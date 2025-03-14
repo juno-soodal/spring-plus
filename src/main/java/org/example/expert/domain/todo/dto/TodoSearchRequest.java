@@ -1,12 +1,10 @@
 package org.example.expert.domain.todo.dto;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDate;
 
 @Getter
-
 public class TodoSearchRequest {
     private final String weather;
     private final LocalDate startDate;

@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.example.expert.domain.common.dto.AuthUser;
 import org.example.expert.domain.common.entity.Timestamped;
 import org.example.expert.domain.user.enums.UserRole;
+import org.springframework.security.core.GrantedAuthority;
 
 @Getter
 @Entity
@@ -39,8 +40,11 @@ public class User extends Timestamped {
     }
 
     public static User fromAuthUser(AuthUser authUser) {
-        return new User(authUser.getId(), authUser.getEmail(), authUser.getNickname(), authUser.getUserRole());
+        GrantedAuthority firstAuthority = authUser.getFirstAuthority();
+        return new User(authUser.getId(), authUser.getEmail(), authUser.getNickname(),UserRole.of(firstAuthority.getAuthority()));
     }
+
+
 
     public void changePassword(String password) {
         this.password = password;
@@ -49,4 +53,5 @@ public class User extends Timestamped {
     public void updateRole(UserRole userRole) {
         this.userRole = userRole;
     }
+
 }
