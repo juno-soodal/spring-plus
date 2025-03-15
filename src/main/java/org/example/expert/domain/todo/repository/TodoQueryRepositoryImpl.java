@@ -95,22 +95,21 @@ public class TodoQueryRepositoryImpl implements TodoQueryRepository {
     @Override
     public Page<TodoSearchResponse> searchTodos(Pageable pageable, String keyword, String nickname, LocalDate startDate, LocalDate endDate) {
 
+        JPAQuery<Long> managerCount = queryFactory.select(manager.count()).from(manager).where(manager.todo.id.eq(todo.id));
+        JPAQuery<Long> commentCount = queryFactory.select(comment.count()).from(comment).where(comment.todo.id.eq(todo.id));
         List<TodoSearchResponse> fetch = queryFactory.select(Projections.constructor(
                                 TodoSearchResponse.class,
                                 todo.title,
-                                manager.countDistinct(),
-                                comment.countDistinct()
+                                managerCount,
+                                commentCount
                         )
                 ).from(todo)
-                .leftJoin(todo.managers,manager).on(manager.todo.id.eq(todo.id))
-                .leftJoin(todo.comments,comment).on(comment.todo.id.eq(todo.id))
                 .where(
                         todoTitleContains(keyword),
                         todoCreatedAtGoe(startDate),
                         todoCreatedAtLoe(endDate),
                         nicknameContains(nickname)
                 )
-                .groupBy(todo.id, todo.title)
                 .orderBy(todo.createdAt.desc())
                 .offset(pageable.getOffset()).limit(pageable.getPageSize()).fetch();
 
