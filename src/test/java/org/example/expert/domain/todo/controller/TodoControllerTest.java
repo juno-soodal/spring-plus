@@ -1,5 +1,8 @@
 package org.example.expert.domain.todo.controller;
 
+import org.example.expert.config.JwtUtil;
+import org.example.expert.config.SecurityConfig;
+import org.example.expert.config.WithMockAuthUser;
 import org.example.expert.domain.common.dto.AuthUser;
 import org.example.expert.domain.common.exception.InvalidRequestException;
 import org.example.expert.domain.todo.dto.response.TodoResponse;
@@ -11,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -22,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TodoController.class)
+@Import({SecurityConfig.class, JwtUtil.class})
 class TodoControllerTest {
 
     @Autowired
@@ -31,6 +36,7 @@ class TodoControllerTest {
     private TodoService todoService;
 
     @Test
+    @WithMockAuthUser(userId= 1L, email = "eamil", nickname = "test", role= UserRole.ROLE_USER)
     void todo_단건_조회에_성공한다() throws Exception {
         // given
         long todoId = 1L;
@@ -60,6 +66,7 @@ class TodoControllerTest {
     }
 
     @Test
+    @WithMockAuthUser(userId= 1L, email = "eamil", nickname = "test", role= UserRole.ROLE_USER)
     void todo_단건_조회_시_todo가_존재하지_않아_예외가_발생한다() throws Exception {
         // given
         long todoId = 1L;
