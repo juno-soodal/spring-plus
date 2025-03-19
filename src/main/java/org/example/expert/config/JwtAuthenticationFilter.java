@@ -52,7 +52,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             }
         }
-        System.out.println(123123);
         filterChain.doFilter(request, response);
 
     }
