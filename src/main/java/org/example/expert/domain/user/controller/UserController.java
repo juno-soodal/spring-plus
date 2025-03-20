@@ -26,7 +26,7 @@ public class UserController {
         userService.changePassword(authUser.getId(), userChangePasswordRequest);
     }
 
-    @PatchMapping("/users/profileImage")
+    @PatchMapping("/users/profile-image")
     public void changeProfileImage(@AuthenticationPrincipal AuthUser authUser, @RequestBody UserChangeProfileImageRequest request) {
         userService.changeProfileImage(authUser.getId(), request);
     }
