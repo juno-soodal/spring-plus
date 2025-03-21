@@ -4,9 +4,12 @@ import lombok.RequiredArgsConstructor;
 import org.example.expert.client.WeatherClient;
 import org.example.expert.domain.common.dto.AuthUser;
 import org.example.expert.domain.common.exception.InvalidRequestException;
+import org.example.expert.domain.todo.dto.TodoQueryRequest;
+import org.example.expert.domain.todo.dto.TodoSearchRequest;
 import org.example.expert.domain.todo.dto.request.TodoSaveRequest;
 import org.example.expert.domain.todo.dto.response.TodoResponse;
 import org.example.expert.domain.todo.dto.response.TodoSaveResponse;
+import org.example.expert.domain.todo.dto.response.TodoSearchResponse;
 import org.example.expert.domain.todo.entity.Todo;
 import org.example.expert.domain.todo.repository.TodoRepository;
 import org.example.expert.domain.user.dto.response.UserResponse;
@@ -25,11 +28,10 @@ public class TodoService {
     private final TodoRepository todoRepository;
     private final WeatherClient weatherClient;
 
+    @Transactional
     public TodoSaveResponse saveTodo(AuthUser authUser, TodoSaveRequest todoSaveRequest) {
         User user = User.fromAuthUser(authUser);
-
         String weather = weatherClient.getTodayWeather();
-
         Todo newTodo = new Todo(
                 todoSaveRequest.getTitle(),
                 todoSaveRequest.getContents(),
@@ -37,7 +39,6 @@ public class TodoService {
                 user
         );
         Todo savedTodo = todoRepository.save(newTodo);
-
         return new TodoSaveResponse(
                 savedTodo.getId(),
                 savedTodo.getTitle(),
@@ -47,10 +48,10 @@ public class TodoService {
         );
     }
 
-    public Page<TodoResponse> getTodos(int page, int size) {
+    public Page<TodoResponse> getTodos(int page, int size, TodoSearchRequest todoSearchRequest) {
         Pageable pageable = PageRequest.of(page - 1, size);
 
-        Page<Todo> todos = todoRepository.findAllByOrderByModifiedAtDesc(pageable);
+        Page<Todo> todos = todoRepository.findAllByOrderByModifiedAtDesc(pageable, todoSearchRequest.getWeather(), todoSearchRequest.getStartDate(), todoSearchRequest.getEndDate());
 
         return todos.map(todo -> new TodoResponse(
                 todo.getId(),
@@ -79,4 +80,10 @@ public class TodoService {
                 todo.getModifiedAt()
         );
     }
+
+    public Page<TodoSearchResponse> searchTodos(Pageable pageable, TodoQueryRequest todoQueryRequest) {
+
+        return todoRepository.searchTodos(pageable, todoQueryRequest.getKeyword(), todoQueryRequest.getNickname(), todoQueryRequest.getStartDate(), todoQueryRequest.getEndDate());
+    }
+
 }
