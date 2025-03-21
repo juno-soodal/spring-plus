@@ -7,6 +7,8 @@ import org.example.expert.domain.user.dto.request.UserChangePasswordRequest;
 import org.example.expert.domain.user.dto.response.UserResponse;
 import org.example.expert.domain.user.entity.User;
 import org.example.expert.domain.user.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +54,13 @@ public class UserService {
 
     }
 
+    public Page<UserResponse> getUsersByNickname(String nickname, Pageable pageable) {
+
+        Page<User> users = userRepository.findByNickname(nickname, pageable);
+        return users.map(user -> new UserResponse(user.getId(), user.getEmail()));
+
+    }
+
     private static void validateNewPassword(UserChangePasswordRequest userChangePasswordRequest) {
         if (userChangePasswordRequest.getNewPassword().length() < 8 ||
                 !userChangePasswordRequest.getNewPassword().matches(".*\\d.*") ||
@@ -59,6 +68,7 @@ public class UserService {
             throw new InvalidRequestException("새 비밀번호는 8자 이상이어야 하고, 숫자와 대문자를 포함해야 합니다.");
         }
     }
+
 
 
 }
